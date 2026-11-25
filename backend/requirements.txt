@@ -5,7 +5,9 @@ python-multipart>=0.0.9
 pydantic>=2.7,<3
 pydantic-settings>=2.3,<3
 python-dotenv>=1.0
-PyMuPDF>=1.24
+# Pinned to the last release that publishes a musllinux wheel, so the Alpine
+# deployment image installs a prebuilt binary instead of compiling MuPDF.
+PyMuPDF==1.24.14
 openai-agents>=0.0.7
 openai>=1.40
 httpx>=0.27
