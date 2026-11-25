@@ -192,6 +192,76 @@ class PatientContext(BaseModel):
     entities: list[dict[str, Any]] = Field(default_factory=list)
 
 
+class Patient(BaseModel):
+    """A stored patient. Dataset records use a namespaced id (e.g. ``synthea:...``)."""
+
+    id: str
+    display_name: str | None = None
+    data_origin: DataOrigin = DataOrigin.USER_UPLOAD
+    description: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+class UploadedDocument(BaseModel):
+    """Document metadata and extraction state; page text is served separately."""
+
+    id: str
+    patient_id: str
+    filename: str
+    content_hash: str | None = None
+    document_type: str | None = None
+    document_date: str | None = None
+    date_precision: str | None = None
+    page_count: int = 0
+    processing_status: str = "UPLOADED"
+    extraction_quality: float | None = None
+    ocr_required_pages: list[int] = Field(default_factory=list)
+    storage_path: str | None = None
+    data_origin: DataOrigin = DataOrigin.USER_UPLOAD
+    created_at: str | None = None
+
+
+class DocumentPage(BaseModel):
+    """One extracted page, kept verbatim for evidence display."""
+
+    document_id: str
+    page_number: int
+    text: str = ""
+    char_count: int = 0
+    ocr_required: bool = False
+
+
+class AnalysisRun(BaseModel):
+    """State of one orchestrator run, used for progress polling."""
+
+    id: str
+    patient_id: str
+    status: str = "QUEUED"
+    current_agent: str | None = None
+    engine: str = "agents_sdk"
+    document_ids: list[str] = Field(default_factory=list)
+    started_at: str | None = None
+    completed_at: str | None = None
+    error_message: str | None = None
+    warnings: list[Any] = Field(default_factory=list)
+    metrics: dict[str, Any] = Field(default_factory=dict)
+
+
+class AgentActivity(BaseModel):
+    """A single real event emitted by an agent or tool during a run."""
+
+    id: str
+    analysis_run_id: str | None = None
+    agent_name: str
+    activity_type: str
+    activity_message: str
+    status: str = "RUNNING"
+    tool_name: str | None = None
+    detail: dict[str, Any] = Field(default_factory=dict)
+    created_at: str | None = None
+
+
 class DatasetSourceInfo(BaseModel):
     id: str
     name: str
