@@ -58,8 +58,8 @@ def build_summary(
     medications = _group(entities, "MEDICATION")
     allergies = _group(entities, "ALLERGY")
     procedures = _group(entities, "PROCEDURE")
-    labs = _group(entities, "LAB")
-    vitals = _group(entities, "VITAL")
+    labs = _group(entities, "LAB_RESULT")
+    vitals = _group(entities, "VITAL_SIGN")
     plans = _group(entities, "PLAN")
 
     uncertainty: list[str] = []

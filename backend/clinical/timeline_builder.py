@@ -18,8 +18,8 @@ CATEGORY_ORDER = {
     "MEDICATION": 2,
     "ALLERGY": 3,
     "PROCEDURE": 4,
-    "LAB": 5,
-    "VITAL": 6,
+    "LAB_RESULT": 5,
+    "VITAL_SIGN": 6,
     "PLAN": 7,
 }
 
@@ -29,8 +29,8 @@ _CATEGORY_LABEL = {
     "MEDICATION": "Medication",
     "ALLERGY": "Allergy",
     "PROCEDURE": "Procedure",
-    "LAB": "Laboratory result",
-    "VITAL": "Vital sign",
+    "LAB_RESULT": "Laboratory result",
+    "VITAL_SIGN": "Vital sign",
     "PLAN": "Plan",
 }
 
@@ -53,7 +53,7 @@ def describe_entity(entity: dict[str, Any]) -> str:
         if status:
             text = f"{text} ({status.lower().replace('_', ' ')})"
         return text
-    if category in ("LAB", "VITAL"):
+    if category in ("LAB_RESULT", "VITAL_SIGN"):
         parts = [value, attributes.get("unit")]
         text = " ".join(part for part in parts if part)
         if attributes.get("reference_range"):
