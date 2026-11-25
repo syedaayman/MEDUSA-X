@@ -6,9 +6,13 @@ Start from the repository root with:
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from backend import repository
 from backend.api.dataset_routes import router as dataset_router
@@ -62,6 +66,24 @@ def health_check() -> dict[str, object]:
         "engine_mode": "agents_sdk" if settings.llm_enabled else "deterministic_pipeline",
         "patients": len(repository.list_patients()),
     }
+
+
+FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+
+if (FRONTEND_DIST / "index.html").is_file():
+    _assets = FRONTEND_DIST / "assets"
+    if _assets.is_dir():
+        app.mount("/assets", StaticFiles(directory=_assets), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def serve_client(full_path: str) -> FileResponse:
+        """Serve the built React app; unknown API paths still return a JSON 404."""
+        if full_path.split("/", 1)[0] in {"api", "health", "docs", "redoc", "openapi.json"}:
+            raise HTTPException(status_code=404, detail="Not Found")
+        candidate = (FRONTEND_DIST / full_path).resolve()
+        if full_path and candidate.is_file() and FRONTEND_DIST in candidate.parents:
+            return FileResponse(candidate)
+        return FileResponse(FRONTEND_DIST / "index.html")
 
 
 if __name__ == "__main__":

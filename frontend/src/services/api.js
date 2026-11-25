@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+// Same-origin by default, so the deployed build calls the FastAPI process that
+// serves it. Local development overrides this with VITE_API_BASE_URL or the proxy.
+const baseURL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export const api = axios.create({ baseURL, timeout: 60_000 });
 
