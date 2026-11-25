@@ -1,8 +1,8 @@
 """SQLite persistence layer for MEDUSA-X.
 
-The prototype uses SQLite by default so the whole workflow survives a restart
-without external credentials. Supabase remains an optional future store; the
-repository functions below are the single access path so it can be swapped.
+SQLite is the only datastore: it needs no API keys, no external credentials and
+no cloud configuration, and the whole workflow survives a restart. The
+repository functions below are the single access path to the database.
 """
 
 from __future__ import annotations

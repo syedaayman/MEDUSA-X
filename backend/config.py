@@ -19,8 +19,6 @@ class Settings(BaseSettings):
     )
 
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
-    supabase_url: str = ""
-    supabase_secret_key: str = ""
     llm_provider: str = "openai"
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
