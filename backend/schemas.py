@@ -154,6 +154,14 @@ class ConflictProposal(BaseModel):
     severity: str = "MEDIUM"
     confidence: float | None = None
     requires_human_review: bool = True
+    # Populated by the Evidence Verification Agent and the human review workflow.
+    verification_status: VerificationStatus = VerificationStatus.UNVERIFIED
+    verification_reason: str | None = None
+    verified_at: str | None = None
+    review_status: ReviewStatus = ReviewStatus.PENDING
+    reviewer_note: str | None = None
+    created_at: str | None = None
+    run_id: str | None = None
 
 
 class VerificationDecision(BaseModel):
