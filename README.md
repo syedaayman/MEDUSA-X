@@ -76,7 +76,7 @@ This is deliberate and important:
 | Agents | OpenAI Agents SDK (`openai-agents`), optional model layer |
 | Extraction | PyMuPDF |
 | Validation | Pydantic v2, pydantic-settings |
-| Storage | SQLite (default). Supabase credentials are optional and unused by default |
+| Storage | SQLite only — one local file, no external database or credentials |
 | Datasets | Python adapters for FHIR JSON, Synthea CSV, image/text/JSON evaluation data |
 
 ## 4. Quick start
@@ -107,8 +107,8 @@ Open <http://127.0.0.1:5173>. The dashboard works with the backend down: it show
 ## 5. Environment variables
 
 See `backend/.env.example` and `frontend/.env.example`. Only `VITE_API_BASE_URL` is exposed to the
-browser — **never** put a model or Supabase secret in a `VITE_` variable. OpenAI and Supabase
-credentials stay in the backend process.
+browser — **never** put a model secret in a `VITE_` variable. The OpenAI credential stays in
+the backend process. SQLite needs no credentials at all.
 
 ## 6. API
 
