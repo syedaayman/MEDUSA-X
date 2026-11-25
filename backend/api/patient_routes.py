@@ -117,4 +117,4 @@ def update_conflict_review(conflict_id: str, payload: ReviewUpdate) -> ConflictP
 def get_audit_trail(patient_id: str, limit: int = Query(default=100, ge=1, le=500)) -> dict:
     if not repository.get_patient(patient_id):
         raise HTTPException(status_code=404, detail=f"Patient {patient_id} not found")
-    return {"patient_id": patient_id, "entries": repository.list_audit(patient_id, limit=limit)}
+    return {"patient_id": patient_id, "entries": repository.list_audit(patient_id)[:limit]}
