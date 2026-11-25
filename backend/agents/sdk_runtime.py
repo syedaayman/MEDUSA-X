@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from typing import Any
 
 from backend.agents import tools as agent_tools
@@ -144,20 +145,59 @@ def build_specialists(ctx: agent_tools.ToolContext) -> dict[str, Any]:
     return {"orchestrator": orchestrator, "specialists": specialists}
 
 
+CREDIT_EXHAUSTED_MESSAGE = "AI model unavailable — continuing with deterministic clinical processing."
+
+
+def _classify_error(exc: Exception) -> tuple[str, str]:
+    """Classify a model-layer failure into a kind and a user-facing reason.
+
+    Kinds: missing_credentials, credit_exhausted, rate_limited, other_error.
+    """
+    text = f"{type(exc).__name__}: {exc}".lower()
+    # Missing credentials
+    if "api_key" in text or "credentials" in text or "authentication" in text or "401" in text:
+        return "missing_credentials", "OPENAI_API_KEY is not configured or invalid; deterministic agents ran instead."
+    # Credit exhaustion (do not retry)
+    if isinstance(exc, Exception) and (
+        "no credits" in text
+        or "credits remaining" in text
+        or "insufficient_quota" in text
+        or "quota" in text
+        or "billing" in text
+        or "exceeded your current quota" in text
+    ):
+        return "credit_exhausted", CREDIT_EXHAUSTED_MESSAGE
+    # Temporary rate limiting
+    if "rate" in text and "limit" in text:
+        return "rate_limited", "Temporary OpenAI rate limit; continuing with deterministic clinical processing."
+    return "other_error", f"{type(exc).__name__}: {exc}"[:500]
+
+
 def run_coordinator(patient_id: str, run_id: str, focus: str = "") -> dict:
     """Run the model-driven coordinator over one patient's stored records."""
     if not SDK_AVAILABLE:
         return {
             "engine": "deterministic",
             "available": False,
+            "kind": "sdk_unavailable",
             "reason": f"OpenAI Agents SDK not installed ({SDK_IMPORT_ERROR})",
         }
     if not settings.llm_enabled:
         return {
             "engine": "deterministic",
             "available": False,
+            "kind": "missing_credentials",
             "reason": "OPENAI_API_KEY is not configured; deterministic agents ran instead.",
         }
+
+    if settings.openai_api_key and not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = settings.openai_api_key
+
+    # The Agents SDK resolves its default OpenAI client from the OPENAI_API_KEY
+    # environment variable. Settings may have loaded the key from backend/.env
+    # without it reaching os.environ, so propagate it here (never log it).
+    if settings.openai_api_key and not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = settings.openai_api_key
 
     ctx = agent_tools.ToolContext(run_id=run_id, patient_id=patient_id, agent="ORCHESTRATOR")
     team = build_specialists(ctx)
@@ -176,19 +216,31 @@ def run_coordinator(patient_id: str, run_id: str, focus: str = "") -> dict:
             timeout=settings.agent_timeout_seconds,
         )
 
-    try:
-        result = asyncio.run(_run())
-        output = getattr(result, "final_output", None) or ""
-        return {
-            "engine": "agents_sdk",
-            "available": True,
-            "note": str(output)[:6000],
-            "tool_calls": len(ctx.calls),
-        }
-    except Exception as exc:  # noqa: BLE001 - model layer is optional
-        return {
-            "engine": "agents_sdk",
-            "available": False,
-            "reason": f"{type(exc).__name__}: {exc}"[:500],
-            "tool_calls": len(ctx.calls),
-        }
+    # Retry only for temporary rate limits (bounded, single retry). Credit
+    # exhaustion and other failures fall back immediately without retrying.
+    last_exc: Exception | None = None
+    for attempt in range(2):
+        try:
+            result = asyncio.run(_run())
+            output = getattr(result, "final_output", None) or ""
+            return {
+                "engine": "agents_sdk",
+                "available": True,
+                "kind": "ok",
+                "note": str(output)[:6000],
+                "tool_calls": len(ctx.calls),
+            }
+        except Exception as exc:  # noqa: BLE001 - model layer is optional
+            last_exc = exc
+            kind, _ = _classify_error(exc)
+            if kind != "rate_limited" or attempt == 1:
+                break
+    assert last_exc is not None
+    kind, reason = _classify_error(last_exc)
+    return {
+        "engine": "agents_sdk",
+        "available": False,
+        "kind": kind,
+        "reason": reason,
+        "tool_calls": len(ctx.calls),
+    }

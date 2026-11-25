@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { fmtDate, statusTone } from "../lib/format.js";
 
-const CATEGORY_FILTERS = ["ALL", "DIAGNOSIS", "MEDICATION", "ALLERGY", "LAB", "PROCEDURE", "VITAL", "SYMPTOM", "PLAN"];
+const CATEGORY_FILTERS = ["ALL", "DIAGNOSIS", "MEDICATION", "ALLERGY", "LAB_RESULT", "PROCEDURE", "VITAL_SIGN", "SYMPTOM", "PLAN"];
 
 export default function Timeline({ events = [], onOpenEvidence }) {
   const [filter, setFilter] = useState("ALL");

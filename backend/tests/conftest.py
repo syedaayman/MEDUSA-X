@@ -13,14 +13,20 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+# Redirect persistence BEFORE any backend module is imported. pytest imports
+# test modules during collection, and `backend.config.settings` is created at
+# import time, so the environment must be overridden at module level: os.environ
+# values take precedence over the .env file, and a session-scoped fixture would
+# be too late. This keeps every test on a private SQLite file, no real key.
+_TEST_TMP = Path(tempfile.mkdtemp(prefix="medusa-x-tests-"))
+os.environ["DATABASE_PATH"] = str(_TEST_TMP / "test.db")
+os.environ["STORAGE_DIR"] = str(_TEST_TMP / "documents")
+os.environ["DATASET_DIR"] = str(_TEST_TMP / "datasets")
+os.environ["OPENAI_API_KEY"] = ""
+
 
 @pytest.fixture(scope="session", autouse=True)
 def _isolated_environment():
-    tmp = tempfile.mkdtemp(prefix="medusa-x-tests-")
-    os.environ["DATABASE_PATH"] = str(Path(tmp) / "test.db")
-    os.environ["STORAGE_DIR"] = str(Path(tmp) / "documents")
-    os.environ["DATASET_DIR"] = str(Path(tmp) / "datasets")
-    os.environ["OPENAI_API_KEY"] = ""
     yield
 
 

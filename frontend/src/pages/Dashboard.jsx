@@ -27,6 +27,16 @@ export default function Dashboard() {
     load();
   }, [load]);
 
+  const totals = patients.reduce(
+    (acc, p) => ({
+      patients: acc.patients + 1,
+      documents: acc.documents + (p.document_count ?? 0),
+      entities: acc.entities + (p.entity_count ?? 0),
+      conflicts: acc.conflicts + (p.pending_review_count ?? 0),
+    }),
+    { patients: 0, documents: 0, entities: 0, conflicts: 0 },
+  );
+
   return (
     <>
       <div className="page-heading">
@@ -37,15 +47,35 @@ export default function Dashboard() {
             Upload patient documents, run the agent team, and review evidence-backed findings.
           </p>
         </div>
-        <span className="demo-badge">Decision-support prototype</span>
       </div>
+
+      <div className="stat-grid">
+        <div className="stat-card">
+          <span className="stat-label">Total patients</span>
+          <span className="stat-value">{loading ? "—" : totals.patients}</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Documents processed</span>
+          <span className="stat-value">{loading ? "—" : totals.documents}</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Clinical entities</span>
+          <span className="stat-value">{loading ? "—" : totals.entities}</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Conflicts awaiting review</span>
+          <span className="stat-value">{loading ? "—" : totals.conflicts}</span>
+        </div>
+      </div>
+
+      {error && <p className="notice error">{error}</p>}
 
       <div className="dashboard-grid">
         <div className="stack">
           <section className="card overview-card" aria-labelledby="patients-title">
             <div className="card-header">
               <div>
-                <h2 id="patients-title">Patients</h2>
+                <h2 id="patients-title">Recent patients</h2>
                 <p>Uploaded clinical records only · dataset patients are listed separately</p>
               </div>
               <button className="button button-secondary" onClick={load} type="button">
@@ -54,8 +84,6 @@ export default function Dashboard() {
             </div>
 
             {loading && <p className="empty-state">Loading patients…</p>}
-            {error && <p className="notice error">{error}</p>}
-
             {!loading && !error && patients.length === 0 && (
               <p className="empty-state">
                 No patient records yet. Upload one or more PDFs on the right to create the first
@@ -89,6 +117,18 @@ export default function Dashboard() {
 
         <div className="stack">
           <FileUpload onUploaded={load} />
+          <section className="card overview-card" aria-labelledby="quick-actions-title">
+            <div className="card-header">
+              <div>
+                <h2 id="quick-actions-title">Quick actions</h2>
+                <p>Common workflows</p>
+              </div>
+            </div>
+            <div className="tag-row">
+              <Link className="button" to="/dashboard">Browse patients</Link>
+              <Link className="button button-secondary" to="/">How it works</Link>
+            </div>
+          </section>
         </div>
       </div>
     </>

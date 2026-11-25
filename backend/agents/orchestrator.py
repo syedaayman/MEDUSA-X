@@ -278,7 +278,14 @@ def run_analysis(
             detail={"note": llm.get("note", ""), "tool_calls": llm.get("tool_calls", 0)},
         )
     elif settings.llm_enabled:
-        warnings.append(f"Model layer unavailable: {llm.get('reason', 'unknown error')}")
+        reason = llm.get("reason", "unknown error")
+        kind = llm.get("kind", "")
+        if kind == "credit_exhausted":
+            # Non-alarming: the deterministic pipeline already produced results.
+            warnings.append("AI model unavailable — continuing with deterministic clinical processing.")
+            _activity(run_id, ORCHESTRATOR, "AI model unavailable — continuing with deterministic clinical processing.", "SKIPPED", detail={"kind": kind})
+        else:
+            warnings.append(f"Model layer unavailable: {reason}")
     else:
         _activity(run_id, ORCHESTRATOR, f"Model layer disabled: {llm.get('reason', '')}", "SKIPPED")
 

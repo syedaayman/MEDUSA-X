@@ -107,12 +107,7 @@ def build_summary(
         "historical_medications": [
             _line(entity)
             for entity in medications
-            if (entity.get("attributes") or {}).get("status") in ("HISTORICAL", "DISCONTINUED", "COMPLETED")
-        ],
-        "medications_status_unclear": [
-            _line(entity)
-            for entity in medications
-            if (entity.get("attributes") or {}).get("status") in (None, "", "UNKNOWN")
+            if (entity.get("attributes") or {}).get("status") in ("HISTORICAL", "DISCONTINUED", "COMPLETED", None, "", "UNKNOWN")
         ],
         "diagnoses": [_line(entity) for entity in diagnoses],
         "symptoms": [_line(entity) for entity in symptoms],
@@ -157,10 +152,6 @@ def build_summary(
         text_parts.append("Current medications: " + "; ".join(sections["current_medications"]) + ".")
     if sections["historical_medications"]:
         text_parts.append("Historical medications: " + "; ".join(sections["historical_medications"]) + ".")
-    if sections["medications_status_unclear"]:
-        text_parts.append(
-            "Medications with unclear status: " + "; ".join(sections["medications_status_unclear"]) + "."
-        )
     if sections["diagnoses"]:
         text_parts.append("Documented diagnoses: " + "; ".join(sections["diagnoses"]) + ".")
     if sections["allergies"]:

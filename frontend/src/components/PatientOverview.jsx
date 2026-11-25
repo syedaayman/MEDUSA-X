@@ -3,57 +3,37 @@ import { fmtDateTime, initials, statusTone } from "../lib/format.js";
 export default function PatientOverview({ patient, counts = {}, analysis, onRun, isRunning, error }) {
   const name = patient?.display_name || patient?.id || "Patient";
   const status = analysis?.status ?? "NOT_STARTED";
+  const initialsLabel = patient?.id?.startsWith("DEMO-")
+    ? `P${patient.id.replace("DEMO-", "")}`
+    : initials(name);
+  const isSynthetic = patient?.id?.startsWith("sample-") || patient?.id?.startsWith("DEMO-");
 
   return (
     <section className="card patient-card">
       <div className="card-header">
-        <div>
-          <p className="eyebrow">Patient overview</p>
-          <span className="patient-id">{patient?.id ?? "unknown patient"}</span>
+        <div className="patient-profile">
+          <div className="avatar" aria-hidden="true">{initialsLabel}</div>
+          <div>
+            <p className="eyebrow">Patient overview</p>
+            <h2>{name}</h2>
+            <p className="muted small">
+              {patient?.id ?? "unknown patient"}
+              {patient?.data_origin ? ` · ${patient.data_origin}` : ""}
+              {patient?.updated_at ? ` · updated ${fmtDateTime(patient.updated_at)}` : ""}
+              {isSynthetic ? " · Synthetic Dataset" : ""}
+            </p>
+          </div>
         </div>
         <span className={`pill ${statusTone(status)}`}>{status}</span>
       </div>
 
-      <div className="patient-profile">
-        <div className="avatar" aria-hidden="true">
-          {initials(name)}
-        </div>
-        <div>
-          <h2>{name}</h2>
-          <p>
-            {patient?.data_origin === "USER_UPLOAD" || !patient?.data_origin
-              ? "Uploaded clinical documents"
-              : patient.data_origin}
-            {patient?.updated_at ? ` · updated ${fmtDateTime(patient.updated_at)}` : ""}
-          </p>
-        </div>
-      </div>
-
       <div className="patient-stats">
-        <div>
-          <span className="stat-label">Documents</span>
-          <span className="stat-value">{counts.documents ?? 0}</span>
-        </div>
-        <div>
-          <span className="stat-label">Clinical entities</span>
-          <span className="stat-value">{counts.entities ?? 0}</span>
-        </div>
-        <div>
-          <span className="stat-label">Timeline events</span>
-          <span className="stat-value">{counts.events ?? 0}</span>
-        </div>
-        <div>
-          <span className="stat-label">Potential conflicts</span>
-          <span className="stat-value">{counts.conflicts ?? 0}</span>
-        </div>
-        <div>
-          <span className="stat-label">Needs review</span>
-          <span className="stat-value">{counts.pendingReview ?? 0}</span>
-        </div>
-        <div>
-          <span className="stat-label">Engine</span>
-          <span className="stat-value">{analysis?.engine ?? "—"}</span>
-        </div>
+        <div><span className="stat-label">Documents</span><span className="stat-value">{counts.documents ?? 0}</span></div>
+        <div><span className="stat-label">Clinical entities</span><span className="stat-value">{counts.entities ?? 0}</span></div>
+        <div><span className="stat-label">Timeline events</span><span className="stat-value">{counts.events ?? 0}</span></div>
+        <div><span className="stat-label">Potential conflicts</span><span className="stat-value">{counts.conflicts ?? 0}</span></div>
+        <div><span className="stat-label">Needs review</span><span className="stat-value">{counts.pending ?? 0}</span></div>
+        <div><span className="stat-label">Engine</span><span className="stat-value">{analysis?.engine ?? "—"}</span></div>
       </div>
 
       <div className="row-between top-gap">

@@ -36,7 +36,8 @@ def _value_key(entity: dict) -> str:
     attrs = entity.get("attributes") or {}
     parts = [
         entity.get("normalized_value") or "",
-        str(attrs.get("dosage") or ""),
+        # Producers store the dose under "dose"; accept the legacy spelling too.
+        str(attrs.get("dose") or attrs.get("dosage") or ""),
         str(attrs.get("frequency") or ""),
         str(attrs.get("route") or ""),
     ]
@@ -169,9 +170,10 @@ def _result(conflict: dict, decision: str, checks: list[dict], evidence: list[di
         "decision": decision,
         "verification_status": decision,
         "verification_reason": reason,
+        "verified_at": repository.utc_now(),
         "checks": checks,
         "evidence": evidence,
-        "requires_human_review": decision in (NEEDS_REVIEW, INSUFFICIENT),
+        "requires_human_review": decision in (VERIFIED, NEEDS_REVIEW, INSUFFICIENT),
         "verified": decision == VERIFIED,
     }
 

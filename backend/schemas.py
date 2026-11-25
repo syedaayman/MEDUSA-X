@@ -21,6 +21,7 @@ class DataOrigin(str, Enum):
 
 class VerificationStatus(str, Enum):
     UNVERIFIED = "UNVERIFIED"
+    PENDING_VERIFICATION = "PENDING_VERIFICATION"
     SUPPORTED = "SUPPORTED"
     VERIFIED_POTENTIAL_CONFLICT = "VERIFIED_POTENTIAL_CONFLICT"
     NOT_A_CONFLICT = "NOT_A_CONFLICT"
@@ -30,6 +31,7 @@ class VerificationStatus(str, Enum):
 
 class ReviewStatus(str, Enum):
     PENDING = "PENDING"
+    NOT_REQUIRED = "NOT_REQUIRED"
     REVIEWED = "REVIEWED"
     UNRESOLVED = "UNRESOLVED"
     DISMISSED = "DISMISSED"
@@ -57,8 +59,13 @@ class EntityCategory(str, Enum):
     MEDICATION = "MEDICATION"
     ALLERGY = "ALLERGY"
     PROCEDURE = "PROCEDURE"
+    # Both spellings are in use across the codebase (Synthea adapters and the
+    # deterministic extractor/timeline emit LAB_RESULT/VITAL_SIGN), so accept
+    # both; the legacy values remain valid.
     LAB = "LAB"
+    LAB_RESULT = "LAB_RESULT"
     VITAL = "VITAL"
+    VITAL_SIGN = "VITAL_SIGN"
     PLAN = "PLAN"
 
 
@@ -143,6 +150,8 @@ class SourceReference(BaseModel):
 class ConflictProposal(BaseModel):
     """Reconciliation Agent output before verification."""
 
+    # The repository exposes both spellings of the conflict identifier.
+    id: str | None = None
     conflict_id: str
     category: str
     description: str

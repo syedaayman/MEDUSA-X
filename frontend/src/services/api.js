@@ -112,6 +112,10 @@ export async function listPatients() {
   return (await api.get("/api/patients")).data;
 }
 
+export async function loadSampleCase(scenario) {
+  return (await api.post(`/api/samples/${encodeURIComponent(scenario)}/load`)).data;
+}
+
 export async function getAuditTrail(patientId, limit = 100) {
   return (await api.get(`/api/patient/${encodeURIComponent(patientId)}/audit`, { params: { limit } })).data;
 }

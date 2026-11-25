@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 
+from backend import repository
 from backend.db import new_id
 
 _TEMPORAL_MARKERS = re.compile(r"\b(history of|past history|previous|resolved|prior|old)\b", re.IGNORECASE)
@@ -31,20 +32,15 @@ def _source_reference(entity: dict) -> dict:
         "document_name": entity.get("source_document_name"),
         "page": entity.get("source_page"),
         "snippet": entity.get("evidence_snippet"),
+        "clinical_date": entity.get("clinical_date"),
         "entity_id": entity.get("id"),
     }
 
 
-def _compared_value(entity: dict, value: str | None) -> dict:
-    return {
-        "entity_id": entity.get("id"),
-        "document_id": entity.get("source_document_id"),
-        "document_name": entity.get("source_document_name"),
-        "page": entity.get("source_page"),
-        "value": value,
-        "date": entity.get("clinical_date"),
-        "date_precision": entity.get("date_precision"),
-    }
+def _compared_value(entity: dict, value: str | None) -> str | None:
+    # Kept as the plain value string: ConflictProposal.compared_values is a
+    # list[str] and the verifier re-checks proposals against stored entities.
+    return value
 
 
 def _proposal(
@@ -409,7 +405,7 @@ def compare_timeline(documents: list[dict], patient_id: str) -> list[dict]:
     """Detect internal chronological inconsistencies inside a document."""
     proposals: list[dict] = []
     for document in documents:
-        text = (document.get("full_text") or "")
+        text = (document.get("full_text") or repository.document_text(document["id"]) or "")
         admission = re.search(r"admission\s+date\s*[:\-]\s*(\d{4}-\d{2}-\d{2})", text, re.IGNORECASE)
         discharge = re.search(r"discharge\s+date\s*[:\-]\s*(\d{4}-\d{2}-\d{2})", text, re.IGNORECASE)
         if admission and discharge and discharge.group(1) < admission.group(1):
@@ -424,10 +420,7 @@ def compare_timeline(documents: list[dict], patient_id: str) -> list[dict]:
                         f"({discharge.group(1)}) before its admission date ({admission.group(1)})."
                     ),
                     "compared_entity_ids": [],
-                    "compared_values": [
-                        {"value": admission.group(1), "document_id": document.get("id"), "date": admission.group(1)},
-                        {"value": discharge.group(1), "document_id": document.get("id"), "date": discharge.group(1)},
-                    ],
+                    "compared_values": [admission.group(1), discharge.group(1)],
                     "source_references": [
                         {
                             "document_id": document.get("id"),

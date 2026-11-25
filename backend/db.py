@@ -151,6 +151,7 @@ CREATE TABLE IF NOT EXISTS conflicts (
     confidence REAL,
     verification_status TEXT NOT NULL DEFAULT 'UNVERIFIED',
     verification_reason TEXT,
+    verified_at TEXT,
     review_status TEXT NOT NULL DEFAULT 'PENDING',
     reviewer_note TEXT,
     requires_human_review INTEGER NOT NULL DEFAULT 1,
@@ -278,6 +279,14 @@ def init_db() -> None:
     """Create tables when missing. Safe to call repeatedly."""
     with db() as conn:
         conn.executescript(SCHEMA)
+    # Idempotent column additions for databases created before verified_at existed.
+    # CREATE TABLE IF NOT EXISTS does not alter an existing table, so add the
+    # column when it is missing; ignore the error when it is already there.
+    with db() as conn:
+        try:
+            conn.execute("ALTER TABLE conflicts ADD COLUMN verified_at TEXT")
+        except sqlite3.OperationalError:
+            pass
 
 
 def reset_db() -> None:

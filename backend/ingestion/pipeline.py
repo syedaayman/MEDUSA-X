@@ -28,6 +28,13 @@ class IngestionError(ValueError):
     """Raised for a document that cannot be accepted."""
 
 
+# A page counts as readable once OCR has produced this much text. The value is
+# deliberately lower than pdf_reader.MIN_PAGE_CHARS: real Tesseract output on a
+# short scan is often 20-40 chars, and those pages are more useful than they
+# are flagged.
+OCR_TEXT_MIN_CHARS = 25
+
+
 def get_tesseract_cmd() -> str | None:
     """Resolve the Tesseract OCR executable path if available."""
     configured = getattr(settings, "tesseract_cmd", "") or os.environ.get("TESSERACT_CMD", "")
@@ -184,13 +191,13 @@ def ingest_document(
                         ocr_result = ocr_texts[page.page_number]
                         if ocr_result:
                             page.text = (page.text + "\n" + ocr_result).strip() if page.text else ocr_result
-                        if len(page.text.strip()) >= 40:
+                        if len(page.text.strip()) >= OCR_TEXT_MIN_CHARS:
                             page.ocr_required = False
 
                 # Recompute OCR required pages and extraction quality
                 result.ocr_required_pages = [p.page_number for p in result.pages if p.ocr_required]
                 if result.pages:
-                    readable = sum(1 for p in result.pages if len(p.text.strip()) >= 40)
+                    readable = sum(1 for p in result.pages if len(p.text.strip()) >= OCR_TEXT_MIN_CHARS)
                     result.extraction_quality = round(readable / len(result.pages), 3)
 
                 repository.log_audit(

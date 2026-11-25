@@ -49,7 +49,6 @@ export default function Navbar() {
             {modelLayer ? "model layer enabled" : "deterministic mode"}
           </span>
         )}
-        <span className="demo-badge">Prototype</span>
       </div>
     </header>
   );

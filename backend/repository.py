@@ -52,6 +52,15 @@ def row_to_dict(row: Any) -> dict[str, Any]:
     for field in JSON_FIELDS & data.keys():
         default = [] if field.endswith(("s", "s")) else {}
         data[field] = _load(data[field], default)
+    # Name unifier: stored rows use the DB column name (clinical_entities and
+    # timeline_events use document_id; timeline rows were stored with
+    # source_document_id). Producers and consumers use both spellings
+    # (source_document_id in reconcilers/verifier, document_id in
+    # report_routes/tools), so expose each alias when the other is missing.
+    if data.get("document_id") is not None and "source_document_id" not in data:
+        data["source_document_id"] = data["document_id"]
+    elif data.get("source_document_id") is not None and "document_id" not in data:
+        data["document_id"] = data["source_document_id"]
     return data
 
 
@@ -381,6 +390,7 @@ def get_conflict(conflict_id: str) -> dict | None:
 
 
 def update_review(conflict_id: str, review_status: str, reviewer_note: str | None, actor: str = "reviewer") -> dict:
+    conflict = get_conflict(conflict_id) or {}
     now = utc_now()
     with db() as conn:
         conn.execute(
@@ -391,7 +401,7 @@ def update_review(conflict_id: str, review_status: str, reviewer_note: str | Non
             "INSERT INTO conflict_reviews (id, conflict_id, review_status, reviewer_note, created_at) VALUES (?, ?, ?, ?, ?)",
             (new_id("rev"), conflict_id, review_status, reviewer_note, now),
         )
-    log_audit(None, actor, "CONFLICT_REVIEW_UPDATED", {"conflict_id": conflict_id, "review_status": review_status})
+    log_audit(conflict.get("patient_id"), actor, "CONFLICT_REVIEW_UPDATED", {"conflict_id": conflict_id, "review_status": review_status})
     return get_conflict(conflict_id) or {}
 
 
@@ -400,14 +410,18 @@ def update_conflict_verification(
     verification_status: str,
     verification_reason: str | None = None,
     requires_human_review: bool = True,
+    verified_at: str | None = None,
 ) -> dict:
     """Record the Evidence Verification Agent's decision for one conflict."""
+    if verified_at is None:
+        verified_at = utc_now()
     with db() as conn:
         conn.execute(
             """UPDATE conflicts
-               SET verification_status = ?, verification_reason = ?, requires_human_review = ?, updated_at = ?
+               SET verification_status = ?, verification_reason = ?, requires_human_review = ?,
+                   verified_at = ?, updated_at = ?
                WHERE id = ?""",
-            (verification_status, verification_reason, 1 if requires_human_review else 0, utc_now(), conflict_id),
+            (verification_status, verification_reason, 1 if requires_human_review else 0, verified_at, utc_now(), conflict_id),
         )
     return get_conflict(conflict_id) or {}
 

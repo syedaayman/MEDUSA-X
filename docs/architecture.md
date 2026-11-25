@@ -8,18 +8,24 @@ uncertainty.
 
 ## Current foundation
 
-- `frontend/`: Vite, React Router, Axios, and Tailwind CSS. Its dashboard is explicitly
-  populated with synthetic mock data.
-- `backend/`: FastAPI application with typed response models and local PDF text
-  extraction using PyMuPDF.
-- `backend/services/`: an explicitly invoked, environment-configured LLM interface.
-  Credentials are not needed to start the API.
+- `frontend/`: Vite, React Router, Axios, and Tailwind CSS; the dashboard reads from the
+  live API rather than synthetic mock data.
+- `backend/`: FastAPI application with typed response models, local PDF text extraction
+  using PyMuPDF (with a stdlib fallback), SQLite persistence, and the deterministic
+  ingestion → extraction → classification → entity extraction → reconciliation →
+  verification → timeline/summary pipeline.
+- `backend/services/`: an explicitly invoked, environment-configured OpenAI SDK
+  interface (`generate_text`); when `OPENAI_API_KEY` is set, the Agents-SDK coordinator
+  layer additionally drives the orchestrator team. Credentials are not needed to start
+  the API, and the health endpoint reports whether the model layer is enabled.
 - `sample_data/`: instructions only; datasets and patient documents are not checked in.
 
-The upload endpoint reads a PDF in memory and returns page text; it does not persist
-uploads or infer clinical facts. Empty patient API responses are intentional until a
-trusted data source is connected. OCR and clinical processing modules are explicit
-placeholders.
+The upload endpoint persists the PDF bytes and its page-level text in SQLite, returns
+page text per page, and flags scanned pages that need OCR. `/api/patients`,
+`/api/patient/{id}/entities`, `/api/patient/{id}/timeline`,
+`/api/patient/{id}/conflicts`, `/api/patient/{id}/summary` and
+`/api/patient/{id}/analysis` serve the real stored data; dataset patients use the
+`synthea:` namespace and never appear as uploaded patients.
 
 ## Planned boundaries
 

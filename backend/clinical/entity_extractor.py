@@ -197,13 +197,16 @@ def _condition_entities(text: str, **kwargs) -> list[dict]:
 
 
 def _allergy_entities(text: str, **kwargs) -> list[dict]:
+    # Callers pass a caller-specific confidence through kwargs; take it out so
+    # it cannot collide with the explicit confidence= below.
+    confidence = kwargs.pop("confidence", 0.85)
     if _NKDA.match(text.strip()):
         return [
             _entity(
                 category="ALLERGY",
                 original=text.strip(),
                 normalized="no known drug allergy",
-                confidence=0.9,
+                confidence=confidence,
                 attributes={"status": "NONE_RECORDED"},
                 **kwargs,
             )
@@ -225,7 +228,7 @@ def _allergy_entities(text: str, **kwargs) -> list[dict]:
                 category="ALLERGY",
                 original=part,
                 normalized=allergen.lower(),
-                confidence=0.85,
+                confidence=confidence,
                 attributes={"reaction": reaction, "status": "RECORDED"},
                 **kwargs,
             )

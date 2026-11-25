@@ -261,6 +261,7 @@ def verify_evidence(ctx: ToolContext, conflict_id: str) -> dict:
         result["decision"],
         result["verification_reason"],
         requires_human_review=result["requires_human_review"],
+        verified_at=result.get("verified_at"),
     )
     ctx.record(
         "verify_evidence",

@@ -20,6 +20,7 @@ from backend import repository
 from backend.api.dataset_routes import router as dataset_router
 from backend.api.patient_routes import router as patient_router
 from backend.api.report_routes import router as report_router
+from backend.api.sample_routes import router as sample_router
 from backend.api.upload_routes import router as upload_router
 from backend.config import settings
 from backend.db import init_db
@@ -56,6 +57,7 @@ app.include_router(upload_router)
 app.include_router(patient_router)
 app.include_router(report_router)
 app.include_router(dataset_router)
+app.include_router(sample_router)
 
 
 @app.get("/health", tags=["system"])

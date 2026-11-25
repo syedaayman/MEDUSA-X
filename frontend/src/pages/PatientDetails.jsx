@@ -24,6 +24,13 @@ import {
 import { asList, fmtDate, fmtDateTime, statusTone } from "../lib/format.js";
 
 const ACTIVE = new Set(["QUEUED", "RUNNING"]);
+const TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "records", label: "Medical Records" },
+  { id: "timeline", label: "Clinical Timeline" },
+  { id: "conflicts", label: "Conflict Review" },
+  { id: "processing", label: "AI Processing" },
+];
 
 export default function PatientDetails() {
   const { patientId } = useParams();
@@ -42,9 +49,9 @@ export default function PatientDetails() {
   const [evidence, setEvidence] = useState(null);
   const [evidenceLoading, setEvidenceLoading] = useState(false);
   const [evidenceError, setEvidenceError] = useState("");
+  const [tab, setTab] = useState("overview");
   const lastStatus = useRef(null);
 
-  // Load timeline, conflicts, summary independently – failures do not crash the page.
   const loadResults = useCallback(async () => {
     setResultsError("");
     const [timelineResult, conflictResult, summaryResult] = await Promise.allSettled([
@@ -52,58 +59,27 @@ export default function PatientDetails() {
       getConflicts(patientId),
       getSummary(patientId),
     ]);
-    if (timelineResult.status === "fulfilled") {
-      setEvents(asList(timelineResult.value, "events"));
-    } else {
-      // Timeline error should not blank the page – leave existing state.
-      console.warn("Timeline load failed:", timelineResult.reason);
-    }
-    if (conflictResult.status === "fulfilled") {
-      setConflicts(asList(conflictResult.value, "conflicts"));
-    } else {
-      console.warn("Conflicts load failed:", conflictResult.reason);
-    }
-    if (summaryResult.status === "fulfilled") {
-      setSummary(summaryResult.value ?? null);
-    } else {
-      console.warn("Summary load failed:", summaryResult.reason);
-    }
-    // Surface a non-fatal notice when any result endpoint returned an error.
-    const failed = [timelineResult, conflictResult, summaryResult].filter(
-      (r) => r.status === "rejected",
-    );
+    if (timelineResult.status === "fulfilled") setEvents(asList(timelineResult.value, "events"));
+    if (conflictResult.status === "fulfilled") setConflicts(asList(conflictResult.value, "conflicts"));
+    if (summaryResult.status === "fulfilled") setSummary(summaryResult.value ?? null);
+    const failed = [timelineResult, conflictResult, summaryResult].filter((r) => r.status === "rejected");
     if (failed.length > 0) {
-      setResultsError(
-        `${failed.length} result panel(s) could not be loaded from the server. ` +
-          "Documents and analysis status are still available.",
-      );
+      setResultsError(`${failed.length} result panel(s) could not be loaded from the server. Documents and analysis status are still available.`);
     }
   }, [patientId]);
 
-  // Load the most recent analysis run and its activity log.
   const loadAnalysis = useCallback(async () => {
     try {
       const runsData = await getPatientAnalysis(patientId);
       const runs = asList(runsData, "runs", "analysis");
-      if (runs.length === 0) {
-        setAnalysis(null);
-        setActivity([]);
-        return null;
-      }
-      const sorted = [...runs].sort((a, b) =>
-        String(b.started_at ?? "").localeCompare(String(a.started_at ?? "")),
-      );
+      if (runs.length === 0) { setAnalysis(null); setActivity([]); return null; }
+      const sorted = [...runs].sort((a, b) => String(b.started_at ?? "").localeCompare(String(a.started_at ?? "")));
       const latest = sorted[0];
       const runId = latest.analysis_run_id ?? latest.run_id ?? latest.id;
-      const [detail, activityData] = await Promise.allSettled([
-        getAnalysis(runId),
-        getAnalysisActivity(runId),
-      ]);
+      const [detail, activityData] = await Promise.allSettled([getAnalysis(runId), getAnalysisActivity(runId)]);
       const run = detail.status === "fulfilled" ? detail.value : latest;
       setAnalysis(run);
-      setActivity(
-        activityData.status === "fulfilled" ? asList(activityData.value, "activity", "events") : [],
-      );
+      setActivity(activityData.status === "fulfilled" ? asList(activityData.value, "activity", "events") : []);
       return run;
     } catch (err) {
       console.warn("Analysis load failed:", err);
@@ -111,21 +87,14 @@ export default function PatientDetails() {
     }
   }, [patientId]);
 
-  // Initial full load: patient + documents (required), then analysis + results (optional).
   useEffect(() => {
     let cancelled = false;
-
     async function init() {
       setLoading(true);
       setPatientError("");
       setResultsError("");
-
-      // Patient and documents are required; failure shows an error state.
       try {
-        const [patientData, documentData] = await Promise.all([
-          getPatient(patientId),
-          listDocuments(patientId),
-        ]);
+        const [patientData, documentData] = await Promise.all([getPatient(patientId), listDocuments(patientId)]);
         if (cancelled) return;
         setPatient(patientData);
         setDocuments(asList(documentData, "documents"));
@@ -134,26 +103,16 @@ export default function PatientDetails() {
         setLoading(false);
         return;
       }
-
       setLoading(false);
-
-      // Analysis and results are optional; failures surface as notices, not blank pages.
       if (cancelled) return;
-      const run = await loadAnalysis();
+      await loadAnalysis();
       if (cancelled) return;
-
-      // Always load results after page loads, regardless of run status.
-      // If a run exists and is complete, results should already be persisted.
       await loadResults();
     }
-
     init();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [patientId, loadAnalysis, loadResults]);
 
-  // Polling loop while a run is active.
   const running = analysis ? ACTIVE.has(analysis.status) : false;
 
   useEffect(() => {
@@ -206,10 +165,7 @@ export default function PatientDetails() {
     setEvidenceError("");
     setEvidence(null);
     try {
-      const data =
-        target.kind === "conflict"
-          ? await getConflictEvidence(target.id)
-          : await getEventEvidence(target.id);
+      const data = target.kind === "conflict" ? await getConflictEvidence(target.id) : await getEventEvidence(target.id);
       setEvidence(data);
     } catch (evidenceRequestError) {
       setEvidenceError(apiError(evidenceRequestError, "Could not load original evidence."));
@@ -223,31 +179,14 @@ export default function PatientDetails() {
     entities: patient?.entity_count ?? 0,
     events: events.length,
     conflicts: conflicts.length,
-    pending: conflicts.filter((conflict) => (conflict.review_status ?? "PENDING") === "PENDING")
-      .length,
+    pending: conflicts.filter((c) => (c.review_status ?? "PENDING") === "PENDING").length,
   };
 
-  // Fatal state: patient could not be loaded at all.
   if (!loading && patientError && !patient) {
     return (
       <div className="page-heading">
-        <div>
-          <p className="eyebrow">Patient workspace</p>
-          <h1>{patientId}</h1>
-        </div>
+        <div><p className="eyebrow">Patient workspace</p><h1>{patientId}</h1></div>
         <p className="notice error">{patientError}</p>
-        <button
-          className="button"
-          onClick={() => {
-            setPatientError("");
-            setLoading(true);
-            // Trigger re-mount by using key – simpler: just reload
-            window.location.reload();
-          }}
-          type="button"
-        >
-          Retry
-        </button>
       </div>
     );
   }
@@ -259,8 +198,10 @@ export default function PatientDetails() {
           <p className="eyebrow">Patient workspace</p>
           <h1>{patient?.display_name ?? patientId}</h1>
           <p className="page-subtitle">
-            {patientId} · {documents.length} document(s) ·{" "}
-            {analysis ? `last run ${analysis.status}` : "no analysis run yet"}
+            {patientId} · {documents.length} document(s) · {analysis ? `last run ${analysis.status}` : "no analysis run yet"}
+            {(patientId.startsWith("sample-") || patientId.startsWith("DEMO-")) && (
+              <span className="pill idle" style={{ marginLeft: 8 }}>Synthetic Dataset</span>
+            )}
           </p>
         </div>
         <button className="button" disabled={running} onClick={handleRun} type="button">
@@ -271,73 +212,79 @@ export default function PatientDetails() {
       {patientError && <p className="notice error">{patientError}</p>}
       {resultsError && <p className="notice warn">{resultsError}</p>}
       {notice && <p className="notice">{notice}</p>}
+
+      <PatientOverview analysis={analysis} counts={counts} error={analysis?.error_message} isRunning={running} onRun={handleRun} patient={patient ?? { id: patientId }} />
+
+      <div className="tab-bar" role="tablist" aria-label="Patient workspace sections">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={tab === t.id}
+            className={`tab${tab === t.id ? " active" : ""}`}
+            onClick={() => setTab(t.id)}
+            type="button"
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {loading && <p className="empty-state">Loading patient workspace…</p>}
 
-      <PatientOverview
-        analysis={analysis}
-        counts={counts}
-        error={analysis?.error_message}
-        isRunning={running}
-        onRun={handleRun}
-        patient={patient ?? { id: patientId }}
-      />
+      {tab === "overview" && (
+        <div className="stack top-gap">
+          <SummaryPanel error={resultsError} loading={loading} summary={summary} />
+          <EvidenceViewer error={evidenceError} evidence={evidence} loading={evidenceLoading} onClose={() => { setEvidence(null); setEvidenceError(""); }} />
+        </div>
+      )}
 
-      <div className="dashboard-grid top-gap">
-        <div className="stack">
-          <AgentActivity activity={activity} analysis={analysis} />
-
-          <section className="card overview-card" aria-labelledby="documents-title">
-            <div className="card-header">
-              <div>
-                <h2 id="documents-title">Source documents</h2>
-                <p>Original uploads are never modified</p>
-              </div>
-              <span className="pill idle">{documents.length} file(s)</span>
-            </div>
-            {documents.length === 0 ? (
-              <p className="empty-state">No documents attached to this patient yet.</p>
-            ) : (
-              documents.map((document) => (
-                <div className="doc-row" key={document.id ?? document.document_id}>
+      {tab === "records" && (
+        <section className="card overview-card top-gap" aria-labelledby="documents-title">
+          <div className="card-header">
+            <div><h2 id="documents-title">Source documents</h2><p>Original uploads are never modified</p></div>
+            <span className="pill idle">{documents.length} file(s)</span>
+          </div>
+          {documents.length === 0 ? (
+            <p className="empty-state">No documents attached to this patient yet.</p>
+          ) : (
+            <div className="doc-grid">
+              {documents.map((document) => (
+                <article className="doc-card" key={document.id ?? document.document_id}>
                   <div>
                     <strong>{document.filename}</strong>
                     <p className="muted small">
                       {document.document_type ?? "UNCLASSIFIED"}
                       {document.document_date ? ` · ${fmtDate(document.document_date)}` : " · date unknown"}
                       {document.page_count ? ` · ${document.page_count} page(s)` : ""}
-                      {document.uploaded_at ? ` · uploaded ${fmtDateTime(document.uploaded_at)}` : ""}
                     </p>
                   </div>
-                  <span className={`pill ${statusTone(document.processing_status)}`}>
-                    {document.processing_status ?? "UPLOADED"}
-                  </span>
-                </div>
-              ))
-            )}
-          </section>
+                  <span className={`pill ${statusTone(document.processing_status)}`}>{document.processing_status ?? "UPLOADED"}</span>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
+      {tab === "timeline" && (
+        <div className="top-gap">
           <Timeline events={events} onOpenEvidence={handleEvidence} />
-          <ConflictPanel
-            busyId={reviewBusy}
-            conflicts={conflicts}
-            onOpenEvidence={handleEvidence}
-            onReview={handleReview}
-          />
         </div>
+      )}
 
-        <div className="stack">
-          <SummaryPanel error={resultsError} loading={loading} summary={summary} />
-          <EvidenceViewer
-            error={evidenceError}
-            evidence={evidence}
-            loading={evidenceLoading}
-            onClose={() => {
-              setEvidence(null);
-              setEvidenceError("");
-            }}
-          />
+      {tab === "conflicts" && (
+        <div className="top-gap">
+          <ConflictPanel busyId={reviewBusy} conflicts={conflicts} onOpenEvidence={handleEvidence} onReview={handleReview} />
+          <EvidenceViewer error={evidenceError} evidence={evidence} loading={evidenceLoading} onClose={() => { setEvidence(null); setEvidenceError(""); }} />
         </div>
-      </div>
+      )}
+
+      {tab === "processing" && (
+        <div className="top-gap">
+          <AgentActivity activity={activity} analysis={analysis} />
+        </div>
+      )}
     </>
   );
 }
