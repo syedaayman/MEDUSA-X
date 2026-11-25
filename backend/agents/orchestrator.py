@@ -15,8 +15,9 @@ from pydantic import ValidationError
 
 from backend import repository
 from backend.agents import sdk_runtime
-from backend.agents.tools import ToolContext, ToolError
+from backend.agents.tools import ToolContext, ToolError  # noqa: F401 - re-exported for callers
 from backend.agents import tools as agent_tools
+from backend.clinical import entity_extractor
 from backend.config import settings
 from backend.db import utc_now
 from backend.schemas import ClinicalEntity
@@ -157,7 +158,7 @@ def run_analysis(
         CLINICAL_STRUCTURING,
         f"{extracted} entity(ies) extracted; {valid_entities} passed schema validation.",
         "COMPLETED" if extracted else ("NEEDS_REVIEW" if ocr_documents else "COMPLETED"),
-        detail={"entity_counts": repository.entity_counts(patient_id) if hasattr(repository, "entity_counts") else {}},
+        detail={"entity_counts": entity_extractor.entity_summary(repository.list_entities(patient_id))},
     )
 
     # ------------------------------------- 3. orchestrator decides reconciliation
@@ -289,7 +290,9 @@ def run_analysis(
 
     metrics["conflicts_verified"] = verification_counts.get("VERIFIED_POTENTIAL_CONFLICT", 0)
     metrics["conflicts_rejected"] = verification_counts.get("NOT_A_CONFLICT", 0)
-    metrics["conflicts_needing_review"] = len(repository.list_conflicts(patient_id, review_status="PENDING"))
+    metrics["conflicts_needing_review"] = len(
+        [item for item in repository.list_conflicts(patient_id) if item.get("review_status") == "PENDING"]
+    )
     metrics["documents"] = len(documents)
 
     repository.update_run(
@@ -337,7 +340,7 @@ def _quality_check(patient_id: str) -> list[str]:
         if conflict.get("verification_status") == "UNVERIFIED":
             issues.append(f"Conflict {conflict.get('id')} is displayed without verification.")
 
-    events = repository.list_timeline_events(patient_id)
+    events = repository.list_timeline(patient_id)
     dated = [event for event in events if event.get("event_date")]
     if [event["event_date"] for event in dated] != sorted(event["event_date"] for event in dated):
         issues.append("Timeline events are not in chronological order.")

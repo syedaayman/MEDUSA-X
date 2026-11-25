@@ -383,6 +383,23 @@ def update_review(conflict_id: str, review_status: str, reviewer_note: str | Non
     return get_conflict(conflict_id) or {}
 
 
+def update_conflict_verification(
+    conflict_id: str,
+    verification_status: str,
+    verification_reason: str | None = None,
+    requires_human_review: bool = True,
+) -> dict:
+    """Record the Evidence Verification Agent's decision for one conflict."""
+    with db() as conn:
+        conn.execute(
+            """UPDATE conflicts
+               SET verification_status = ?, verification_reason = ?, requires_human_review = ?, updated_at = ?
+               WHERE id = ?""",
+            (verification_status, verification_reason, 1 if requires_human_review else 0, utc_now(), conflict_id),
+        )
+    return get_conflict(conflict_id) or {}
+
+
 # ------------------------------------------------------------- summaries
 
 def save_summary(patient_id: str, summary: str, sections: dict, uncertainty_notes: list[str], analysis_run_id: str | None = None, data_origin: str = "USER_UPLOAD") -> dict:
