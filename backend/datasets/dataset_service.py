@@ -25,7 +25,6 @@ def sync_dataset_sources() -> list[dict]:
     for name, adapter_cls in ADAPTERS.items():
         adapter = adapter_cls()
         repository.upsert_dataset_source(
-            source_id=name,
             name=name,
             title=adapter.title,
             source_url=adapter.source_url,
