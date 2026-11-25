@@ -64,7 +64,7 @@ def import_dataset(name: str, limit: int = 25) -> dict:
     inspection = adapter.inspect_dataset()
     run_id = repository.start_import_run(source["id"])
     if not inspection.get("available"):
-        message = inspection.get("notes") or ["Dataset files are not present locally."]
+        message = [inspection["note"]] if inspection.get("note") else ["Dataset files are not present locally."]
         repository.finish_import_run(run_id, source["id"], "UNAVAILABLE", 0, 0, list(message))
         return {
             "dataset": name,

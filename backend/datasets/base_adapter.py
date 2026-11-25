@@ -56,6 +56,16 @@ class BaseDatasetAdapter(abc.ABC):
     patient_prefix: str = "dataset:"
     data_origin: str = "CONTROLLED_TEST_FIXTURE"
 
+    @property
+    def title(self) -> str:
+        """Human-readable dataset name used by the API and the dashboard."""
+        return self.name.replace("_", " ").title()
+
+    @property
+    def description(self) -> str:
+        """Short provenance description; never claims data that is not present."""
+        return f"{self.dataset_type} dataset read from local files under {self.root}."
+
     def __init__(self, root: Path | None = None) -> None:
         from backend.config import settings
 

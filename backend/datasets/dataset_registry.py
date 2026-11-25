@@ -43,8 +43,8 @@ def describe_adapters() -> list[dict]:
                 "data_origin": adapter.data_origin,
                 "available": inspection.get("available", False),
                 "file_count": inspection.get("file_count", 0),
-                "formats": inspection.get("formats", []),
-                "notes": inspection.get("notes", []),
+                "formats": sorted(inspection.get("files_by_kind", {})),
+                "notes": [inspection["note"]] if inspection.get("note") else [],
                 "root": inspection.get("root"),
             }
         )
