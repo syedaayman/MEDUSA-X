@@ -242,7 +242,7 @@ def list_entities(
     if categories:
         placeholders = ", ".join("?" for _ in categories)
         query += f" AND category IN ({placeholders})"
-        params.extends(categories)
+        params.extend(categories)
     if document_id:
         query += " AND document_id = ?"
         params.append(document_id)
@@ -385,14 +385,14 @@ def update_review(conflict_id: str, review_status: str, reviewer_note: str | Non
 
 # ------------------------------------------------------------- summaries
 
-def save_summary(patient_id: str, summary: str, sections: dict, uncertanty: list[str], analysis_run_id: str | None = None, data_origin: str = "USER_UPLOAD") -> dict:
+def save_summary(patient_id: str, summary: str, sections: dict, uncertainty_notes: list[str], analysis_run_id: str | None = None, data_origin: str = "USER_UPLOAD") -> dict:
     summary_id = new_id("sum")
     with db() as conn:
         conn.execute(
             """INSERT INTO patient_summaries
-               (id, patient_id, analysis_run_id, summary, sections, uncertanty_notes, data_origin, created_at)
+               (id, patient_id, analysis_run_id, summary, sections, uncertainty_notes, data_origin, created_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (summary_id, patient_id, analysis_run_id, summary, _dump(sections), _dump(uncertanty), data_origin, utc_now()),
+            (summary_id, patient_id, analysis_run_id, summary, _dump(sections), _dump(uncertainty_notes), data_origin, utc_now()),
         )
     return get_latest_summary(patient_id) or {}
 
