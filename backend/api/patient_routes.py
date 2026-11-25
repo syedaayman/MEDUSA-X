@@ -26,6 +26,26 @@ class ReviewUpdate(BaseModel):
     actor: str = Field(default="reviewer", max_length=120)
 
 
+@router.get("/api/patients")
+def list_patients() -> list[dict]:
+    """List user-uploaded patients with live counts for the dashboard."""
+    patients: list[dict] = []
+    for record in repository.list_patients(data_origin="USER_UPLOAD"):
+        patient_key = record.get("id")
+        conflicts = repository.list_conflicts(patient_key)
+        patients.append(
+            {
+                **record,
+                "document_count": len(repository.list_documents(patient_key)),
+                "entity_count": len(repository.list_entities(patient_key)),
+                "timeline_count": len(repository.list_timeline(patient_key)),
+                "conflict_count": len(conflicts),
+                "pending_review_count": len([c for c in conflicts if c.get("review_status") == "PENDING"]),
+            }
+        )
+    return patients
+
+
 @router.get("/api/patient/{patient_id}", response_model=Patient)
 def get_patient(patient_id: str) -> Patient:
     patient = repository.get_patient(patient_id)
