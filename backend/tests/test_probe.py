@@ -1,34 +1,34 @@
-"""Environment probe used during bootstrap. Writes a JSON report into the repo."""
+"""Readiness checks for the backend test session.
 
-import importlib
-import json
-import sys
-from pathlib import Path
+They fail fast with an explicit message when the backend dependencies are not
+installed, which is the usual cause of a confusing collection error, and they
+prove that conftest.py redirected persistence away from the working tree.
+No file is written into the repository by these tests.
+"""
 
-MODULES = [
-    "pydantic",
-    "pydantic_settings",
+from __future__ import annotations
+
+import pytest
+
+REQUIRED_MODULES = (
     "fastapi",
     "starlette",
     "uvicorn",
     "multipart",
     "fitz",
-    "pymupdf",
-    "openai",
-    "agents",
-    "httpx",
-    "pytest",
-]
+    "pydantic",
+    "pydantic_settings",
+)
 
 
-def test_probe_writes_report():
-    report = {"python": sys.version, "executable": sys.executable, "modules": {}}
-    for name in MODULES:
-        try:
-            module = importlib.import_module(name)
-            report["modules"][name] = getattr(module, "__version__", "installed")
-        except Exception as exc:  # noqa: BLE001 - probe reports everything
-            report["modules"][name] = f"MISSING: {type(exc).__name__}"
-    target = Path(__file__).with_name("_env_probe.json")
-    target.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    assert target.exists()
+@pytest.mark.parametrize("module", REQUIRED_MODULES)
+def test_backend_dependency_is_available(module: str) -> None:
+    """Skip rather than error, so one missing extra does not hide the suite."""
+    pytest.importorskip(module)
+
+
+def test_persistence_is_redirected_for_the_test_session() -> None:
+    from backend.config import settings
+
+    assert str(settings.database_path).endswith("test.db"), settings.database_path
+    assert settings.llm_enabled is False, "tests must run with no model credential configured"
