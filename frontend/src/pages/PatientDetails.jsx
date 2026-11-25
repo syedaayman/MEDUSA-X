@@ -35,7 +35,8 @@ export default function PatientDetails() {
   const [conflicts, setConflicts] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [patientError, setPatientError] = useState("");
+  const [resultsError, setResultsError] = useState("");
   const [notice, setNotice] = useState("");
   const [reviewBusy, setReviewBusy] = useState("");
   const [evidence, setEvidence] = useState(null);
@@ -43,67 +44,116 @@ export default function PatientDetails() {
   const [evidenceError, setEvidenceError] = useState("");
   const lastStatus = useRef(null);
 
+  // Load timeline, conflicts, summary independently – failures do not crash the page.
   const loadResults = useCallback(async () => {
+    setResultsError("");
     const [timelineResult, conflictResult, summaryResult] = await Promise.allSettled([
       getTimeline(patientId),
       getConflicts(patientId),
       getSummary(patientId),
     ]);
-    if (timelineResult.status === "fulfilled") setEvents(asList(timelineResult.value, "events"));
-    if (conflictResult.status === "fulfilled") setConflicts(asList(conflictResult.value, "conflicts"));
-    if (summaryResult.status === "fulfilled") setSummary(summaryResult.value ?? null);
+    if (timelineResult.status === "fulfilled") {
+      setEvents(asList(timelineResult.value, "events"));
+    } else {
+      // Timeline error should not blank the page – leave existing state.
+      console.warn("Timeline load failed:", timelineResult.reason);
+    }
+    if (conflictResult.status === "fulfilled") {
+      setConflicts(asList(conflictResult.value, "conflicts"));
+    } else {
+      console.warn("Conflicts load failed:", conflictResult.reason);
+    }
+    if (summaryResult.status === "fulfilled") {
+      setSummary(summaryResult.value ?? null);
+    } else {
+      console.warn("Summary load failed:", summaryResult.reason);
+    }
+    // Surface a non-fatal notice when any result endpoint returned an error.
+    const failed = [timelineResult, conflictResult, summaryResult].filter(
+      (r) => r.status === "rejected",
+    );
+    if (failed.length > 0) {
+      setResultsError(
+        `${failed.length} result panel(s) could not be loaded from the server. ` +
+          "Documents and analysis status are still available.",
+      );
+    }
   }, [patientId]);
 
+  // Load the most recent analysis run and its activity log.
   const loadAnalysis = useCallback(async () => {
-    const runsData = await getPatientAnalysis(patientId);
-    const runs = asList(runsData, "runs", "analysis");
-    if (runs.length === 0) {
-      setAnalysis(null);
-      setActivity([]);
+    try {
+      const runsData = await getPatientAnalysis(patientId);
+      const runs = asList(runsData, "runs", "analysis");
+      if (runs.length === 0) {
+        setAnalysis(null);
+        setActivity([]);
+        return null;
+      }
+      const sorted = [...runs].sort((a, b) =>
+        String(b.started_at ?? "").localeCompare(String(a.started_at ?? "")),
+      );
+      const latest = sorted[0];
+      const runId = latest.analysis_run_id ?? latest.run_id ?? latest.id;
+      const [detail, activityData] = await Promise.allSettled([
+        getAnalysis(runId),
+        getAnalysisActivity(runId),
+      ]);
+      const run = detail.status === "fulfilled" ? detail.value : latest;
+      setAnalysis(run);
+      setActivity(
+        activityData.status === "fulfilled" ? asList(activityData.value, "activity", "events") : [],
+      );
+      return run;
+    } catch (err) {
+      console.warn("Analysis load failed:", err);
       return null;
     }
-    const sorted = [...runs].sort((a, b) =>
-      String(b.started_at ?? "").localeCompare(String(a.started_at ?? "")),
-    );
-    const latest = sorted[0];
-    const runId = latest.analysis_run_id ?? latest.run_id ?? latest.id;
-    const [detail, activityData] = await Promise.allSettled([
-      getAnalysis(runId),
-      getAnalysisActivity(runId),
-    ]);
-    const run = detail.status === "fulfilled" ? detail.value : latest;
-    setAnalysis(run);
-    setActivity(activityData.status === "fulfilled" ? asList(activityData.value, "activity", "events") : []);
-    return run;
   }, [patientId]);
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [patientData, documentData] = await Promise.all([
-        getPatient(patientId),
-        listDocuments(patientId),
-      ]);
-      setPatient(patientData);
-      setDocuments(asList(documentData, "documents"));
-      setError("");
-    } catch (loadError) {
-      setError(apiError(loadError, "Could not load this patient."));
-    } finally {
-      setLoading(false);
-    }
-    try {
-      const run = await loadAnalysis();
-      if (run && !ACTIVE.has(run.status)) await loadResults();
-    } catch {
-      /* results stay empty when no run exists yet */
-    }
-  }, [loadAll, loadAnalysis, loadResults, patientId]);
-
+  // Initial full load: patient + documents (required), then analysis + results (optional).
   useEffect(() => {
-    loadAll();
-  }, [loadAll]);
+    let cancelled = false;
 
+    async function init() {
+      setLoading(true);
+      setPatientError("");
+      setResultsError("");
+
+      // Patient and documents are required; failure shows an error state.
+      try {
+        const [patientData, documentData] = await Promise.all([
+          getPatient(patientId),
+          listDocuments(patientId),
+        ]);
+        if (cancelled) return;
+        setPatient(patientData);
+        setDocuments(asList(documentData, "documents"));
+      } catch (loadError) {
+        if (!cancelled) setPatientError(apiError(loadError, "Could not load this patient."));
+        setLoading(false);
+        return;
+      }
+
+      setLoading(false);
+
+      // Analysis and results are optional; failures surface as notices, not blank pages.
+      if (cancelled) return;
+      const run = await loadAnalysis();
+      if (cancelled) return;
+
+      // Always load results after page loads, regardless of run status.
+      // If a run exists and is complete, results should already be persisted.
+      await loadResults();
+    }
+
+    init();
+    return () => {
+      cancelled = true;
+    };
+  }, [patientId, loadAnalysis, loadResults]);
+
+  // Polling loop while a run is active.
   const running = analysis ? ACTIVE.has(analysis.status) : false;
 
   useEffect(() => {
@@ -132,7 +182,7 @@ export default function PatientDetails() {
       setAnalysis(run ?? { status: "QUEUED" });
       await loadAnalysis();
     } catch (runError) {
-      setError(apiError(runError, "Could not start the analysis run."));
+      setNotice(apiError(runError, "Could not start the analysis run."));
     }
   }
 
@@ -173,8 +223,34 @@ export default function PatientDetails() {
     entities: patient?.entity_count ?? 0,
     events: events.length,
     conflicts: conflicts.length,
-    pending: conflicts.filter((conflict) => (conflict.review_status ?? "PENDING") === "PENDING").length,
+    pending: conflicts.filter((conflict) => (conflict.review_status ?? "PENDING") === "PENDING")
+      .length,
   };
+
+  // Fatal state: patient could not be loaded at all.
+  if (!loading && patientError && !patient) {
+    return (
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">Patient workspace</p>
+          <h1>{patientId}</h1>
+        </div>
+        <p className="notice error">{patientError}</p>
+        <button
+          className="button"
+          onClick={() => {
+            setPatientError("");
+            setLoading(true);
+            // Trigger re-mount by using key – simpler: just reload
+            window.location.reload();
+          }}
+          type="button"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -192,7 +268,8 @@ export default function PatientDetails() {
         </button>
       </div>
 
-      {error && <p className="notice error">{error}</p>}
+      {patientError && <p className="notice error">{patientError}</p>}
+      {resultsError && <p className="notice warn">{resultsError}</p>}
       {notice && <p className="notice">{notice}</p>}
       {loading && <p className="empty-state">Loading patient workspace…</p>}
 
@@ -249,7 +326,7 @@ export default function PatientDetails() {
         </div>
 
         <div className="stack">
-          <SummaryPanel error={error} loading={loading} summary={summary} />
+          <SummaryPanel error={resultsError} loading={loading} summary={summary} />
           <EvidenceViewer
             error={evidenceError}
             evidence={evidence}

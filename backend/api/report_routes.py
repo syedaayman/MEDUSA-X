@@ -83,7 +83,7 @@ def get_conflict_evidence(conflict_id: str) -> dict:
 @router.get("/api/events/{event_id}/evidence")
 def get_event_evidence(event_id: str) -> dict:
     """Return the source page for one timeline event."""
-    event = repository.get_timeline_event(event_id) if hasattr(repository, "get_timeline_event") else None
+    event = repository.get_event(event_id) if hasattr(repository, "get_event") else None
     if not event:
         raise HTTPException(status_code=404, detail=f"Timeline event {event_id} not found")
     page = (

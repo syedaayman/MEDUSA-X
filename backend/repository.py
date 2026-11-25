@@ -307,7 +307,11 @@ def list_timeline(patient_id: str) -> list[dict]:
                ORDER BY COALESCE(event_date, '9999-99-99'), created_at""",
             (patient_id,),
         ).fetchall()
-    return [row_to_dict(row) for row in rows]
+    result = [row_to_dict(row) for row in rows]
+    # Inject event_id alias: DB column is "id" but Pydantic schema requires "event_id".
+    for item in result:
+        item.setdefault("event_id", item["id"])
+    return result
 
 
 def get_event(event_id: str) -> dict | None:
@@ -359,13 +363,21 @@ def list_conflicts(patient_id: str) -> list[dict]:
         rows = conn.execute(
             "SELECT * FROM conflicts WHERE patient_id = ? ORDER BY created_at", (patient_id,)
         ).fetchall()
-    return [row_to_dict(row) for row in rows]
+    result = [row_to_dict(row) for row in rows]
+    # Inject conflict_id alias: DB column is "id" but Pydantic schema requires "conflict_id".
+    for item in result:
+        item.setdefault("conflict_id", item["id"])
+    return result
 
 
 def get_conflict(conflict_id: str) -> dict | None:
     with db() as conn:
         row = conn.execute("SELECT * FROM conflicts WHERE id = ?", (conflict_id,)).fetchone()
-    return row_to_dict(row) if row else None
+    if not row:
+        return None
+    result = row_to_dict(row)
+    result.setdefault("conflict_id", result["id"])
+    return result
 
 
 def update_review(conflict_id: str, review_status: str, reviewer_note: str | None, actor: str = "reviewer") -> dict:

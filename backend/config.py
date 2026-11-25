@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     llm_provider: str = "openai"
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
+    tesseract_cmd: str = ""
 
     # Persistence: SQLite is the default store. Set MEDUSA_DB_PATH to relocate it.
     database_path: str = str(BACKEND_DIR / "data" / "medusa_x.db")
