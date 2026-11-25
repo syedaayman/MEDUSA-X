@@ -2,7 +2,7 @@
 
 from openai import AsyncOpenAI
 
-from config import settings
+from backend.config import settings
 
 
 async def generate_text(prompt: str) -> str:
