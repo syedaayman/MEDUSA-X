@@ -1,18 +1,50 @@
-FROM node:26-alpine AS build
+# syntax=docker/dockerfile:1
+
+# ---------------------------------------------------------------------------
+# Stage 1: build the React/Vite client into static assets.
+# ---------------------------------------------------------------------------
+FROM node:26-alpine AS client
 RUN apk upgrade --no-cache
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
+WORKDIR /client
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+COPY frontend/ ./
 RUN npm run build
-FROM python:3-alpine
-# The date keys the build cache so this layer installs today's OS fixes; AppJet keeps it current on deploy.
+
+# ---------------------------------------------------------------------------
+# Stage 2: FastAPI runtime. It serves the API *and* the built client, so the
+# browser talks to one origin and no VITE_API_BASE_URL is needed.
+# ---------------------------------------------------------------------------
+FROM python:3.12-alpine
+
+# The date keys the cache so this layer installs today's OS fixes.
 RUN echo "os-refresh 2026-11-25" && apk upgrade --no-cache
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
 WORKDIR /app
-COPY --from=build /app/dist ./
-ENV PORT=8000
+
+COPY backend/requirements.txt ./backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
+
+COPY backend/ ./backend/
+COPY --from=client /client/dist ./frontend/dist
+
+RUN adduser -D -u 10001 -h /home/appjet appjet \
+    && mkdir -p /app/data/documents /app/sample_data/datasets \
+    && chown -R 10001:10001 /app /home/appjet
+
+ENV HOME=/home/appjet \
+    PORT=8000 \
+    DATABASE_PATH=/app/data/medusa_x.db \
+    STORAGE_DIR=/app/data/documents \
+    DATASET_DIR=/app/sample_data/datasets
+
 EXPOSE 8000
-RUN mkdir -p /app /home/appjet && chown -R 10001:10001 /app /home/appjet
-ENV HOME=/home/appjet
 USER 10001:10001
-CMD python3 -m http.server "$PORT" --bind 0.0.0.0
+
+# Single worker: the SQLite file and the in-process analysis runs are per
+# process, so extra workers would not share state.
+CMD ["sh", "-c", "exec uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]
