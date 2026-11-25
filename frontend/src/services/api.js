@@ -96,12 +96,22 @@ export async function importDataset(name, limit = 25) {
   return (await api.post(`/api/datasets/${encodeURIComponent(name)}/import`, null, { params: { limit } })).data;
 }
 
-export async function evaluateDataset(name, evaluationType = "EXTRACTION", limit = 20) {
-  return (
-    await api.post(`/api/datasets/${encodeURIComponent(name)}/evaluate`, null, {
-      params: { evaluation_type: evaluationType, limit },
-    })
-  ).data;
+export async function evaluateDataset(name, evaluationType, limit = 20) {
+  const params = { limit };
+  if (evaluationType) params.evaluation_type = evaluationType;
+  return (await api.post(`/api/datasets/${encodeURIComponent(name)}/evaluate`, null, { params })).data;
+}
+
+export async function getEventEvidence(eventId) {
+  return (await api.get(`/api/events/${encodeURIComponent(eventId)}/evidence`)).data;
+}
+
+export async function listPatients() {
+  return (await api.get("/api/patients")).data;
+}
+
+export async function getAuditTrail(patientId, limit = 100) {
+  return (await api.get(`/api/patient/${encodeURIComponent(patientId)}/audit`, { params: { limit } })).data;
 }
 
 export async function getEvaluation(name) {

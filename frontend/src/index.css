@@ -796,3 +796,298 @@ h1 {
     font-size: 11px;
   }
 }
+
+/* ---------- live-data utilities used by the wired components ---------- */
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.field {
+  display: block;
+  margin-top: 12px;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 5px;
+  color: #6d7f89;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.text-input {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #dde7ea;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f3a48;
+  font-size: 12px;
+  padding: 0 10px;
+}
+
+.text-input:focus {
+  border-color: #8ec9c5;
+  outline: 2px solid #e3f3f1;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.top-gap {
+  margin-top: 14px;
+}
+
+.muted {
+  color: #7c8b95;
+}
+
+.small {
+  font-size: 10px;
+}
+
+.plain-list {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  color: #4c6470;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.link-button {
+  border: 0;
+  background: none;
+  color: #167f7c;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 20px;
+  border: 1px solid #e2eaec;
+  background: #f6fafb;
+  color: #62757f;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 4px 8px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pill.ok {
+  border-color: #c4e5de;
+  background: #ecf8f4;
+  color: #1c7a63;
+}
+
+.pill.warn {
+  border-color: #f0dfc0;
+  background: #fdf7ec;
+  color: #906127;
+}
+
+.pill.bad {
+  border-color: #f2cdc5;
+  background: #fdf1ee;
+  color: #a53c2b;
+}
+
+.pill.idle {
+  border-color: #e4eaed;
+  background: #f7fafb;
+  color: #6d7d87;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  background: #f2f7f8;
+  color: #5b7079;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 3px 7px;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.chip {
+  border: 1px solid #e2eaec;
+  border-radius: 20px;
+  background: #fff;
+  color: #647881;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 5px 10px;
+}
+
+.chip.active {
+  border-color: #9ed3ce;
+  background: #eaf6f5;
+  color: #147d7a;
+}
+
+.upload-dropzone.dragging {
+  border-color: #168c88;
+  background: #eef8f7;
+}
+
+.activity-list {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activity-row {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  gap: 10px;
+  border: 1px solid #edf1f3;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.activity-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: #b9c7ce;
+}
+
+.activity-dot.ok {
+  background: #2fa48b;
+}
+
+.activity-dot.warn {
+  background: #d9a13f;
+}
+
+.activity-dot.bad {
+  background: #cc5b45;
+}
+
+.activity-body strong {
+  font-size: 11px;
+}
+
+.activity-body p {
+  margin: 4px 0 3px;
+  color: #63767f;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.doc-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  border-top: 1px solid #edf1f3;
+  padding: 9px 0;
+  font-size: 11px;
+}
+
+.doc-row:first-child {
+  border-top: 0;
+}
+
+.doc-row strong {
+  font-size: 11px;
+}
+
+.json-block {
+  max-height: 220px;
+  overflow: auto;
+  margin: 10px 0 0;
+  border-radius: 8px;
+  background: #f7f9fa;
+  color: #4f6570;
+  font-size: 10px;
+  line-height: 1.5;
+  padding: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dataset-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.dataset-card {
+  border: 1px solid #e7edf0;
+  border-radius: 11px;
+  padding: 14px;
+}
+
+.dataset-card h3 {
+  margin: 0 0 4px;
+  font-size: 12px;
+}
+
+.patient-list {
+  display: grid;
+  gap: 10px;
+}
+
+.patient-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #e7edf0;
+  border-radius: 11px;
+  padding: 12px 14px;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.patient-row:hover {
+  border-color: #b9dcd9;
+  background: #f8fcfc;
+}
+
+@media (max-width: 680px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
