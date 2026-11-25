@@ -6,6 +6,8 @@ Start from the repository root with:
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
@@ -22,6 +24,13 @@ from backend.api.upload_routes import router as upload_router
 from backend.config import settings
 from backend.db import init_db
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Create the SQLite schema on startup; no external database is required."""
+    init_db()
+    yield
+
+
 app = FastAPI(
     title="MEDUSA-X API",
     description=(
@@ -32,6 +41,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -46,11 +56,6 @@ app.include_router(upload_router)
 app.include_router(patient_router)
 app.include_router(report_router)
 app.include_router(dataset_router)
-
-
-@app.on_event("startup")
-def _startup() -> None:
-    init_db()
 
 
 @app.get("/health", tags=["system"])

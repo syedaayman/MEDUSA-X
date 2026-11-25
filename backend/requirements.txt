@@ -1,6 +1,9 @@
 # MEDUSA-X backend requirements
-fastapi>=0.115,<0.120
-uvicorn[standard]>=0.30,<0.40
+# FastAPI 0.165 requires starlette>=1.6.0; earlier releases pin starlette 0.4x,
+# which carries blocking advisories in the deployment image scan.
+fastapi>=0.165,<0.166
+starlette>=1.6.0
+uvicorn[standard]>=0.39,<0.40
 python-multipart>=0.0.9
 pydantic>=2.7,<3
 pydantic-settings>=2.3,<3

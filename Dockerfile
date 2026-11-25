@@ -27,6 +27,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY backend/requirements.txt ./backend/requirements.txt
+
+# Refresh pip past its advisory and drop the stale wheel bundled inside
+# ensurepip, which is unused at runtime but still scanned in the image.
+RUN python -m pip install --no-cache-dir --upgrade "pip>=26.1.2" \
+    && rm -rf /usr/local/lib/python*/ensurepip/_bundled
+
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
 COPY backend/ ./backend/
