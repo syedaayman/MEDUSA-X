@@ -89,7 +89,6 @@ pip install -r backend/requirements.txt
 cp backend/.env.example backend/.env      # optional: add OPENAI_API_KEY
 uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-
 Swagger: <http://127.0.0.1:8000/docs> · Health: <http://127.0.0.1:8000/health>
 
 Frontend (second terminal):
