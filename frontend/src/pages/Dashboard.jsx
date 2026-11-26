@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import DatasetPanel from "../components/DatasetPanel.jsx";
 import FileUpload from "../components/FileUpload.jsx";
 import { apiError, listPatients } from "../services/api.js";
 import { asList, fmtDateTime, statusTone } from "../lib/format.js";
@@ -111,8 +110,6 @@ export default function Dashboard() {
               ))}
             </div>
           </section>
-
-          <DatasetPanel />
         </div>
 
         <div className="stack">

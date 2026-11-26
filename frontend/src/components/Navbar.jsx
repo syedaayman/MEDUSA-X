@@ -26,9 +26,6 @@ export default function Navbar() {
     };
   }, []);
 
-  const modelLayer = health?.llm_enabled ?? health?.model_layer;
-  const tone = offline ? "bad" : health ? "ok" : "idle";
-
   return (
     <header className="topbar">
       <Link className="brand" to="/">
@@ -41,14 +38,9 @@ export default function Navbar() {
         </span>
       </Link>
       <div className="topbar-actions">
-        <span className={`pill ${tone}`}>
-          {offline ? "API offline" : health ? "API connected" : "checking API"}
+        <span className="topbar-status">
+          {offline ? "API offline" : health ? "API connected" : "Checking API…"}
         </span>
-        {health && (
-          <span className={`pill ${modelLayer ? "ok" : "warn"}`}>
-            {modelLayer ? "model layer enabled" : "deterministic mode"}
-          </span>
-        )}
       </div>
     </header>
   );

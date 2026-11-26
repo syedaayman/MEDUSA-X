@@ -51,10 +51,6 @@ export default function Sidebar() {
           </nav>
         </div>
       ))}
-
-      <div className="sidebar-note">
-        <p>Prototype notice: synthetic demonstration data only. MEDUSA-X does not diagnose, prescribe, or decide which record is correct.</p>
-      </div>
     </aside>
   );
 }
