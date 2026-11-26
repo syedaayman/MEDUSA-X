@@ -173,6 +173,33 @@ def _classify_error(exc: Exception) -> tuple[str, str]:
     return "other_error", f"{type(exc).__name__}: {exc}"[:500]
 
 
+_COORDINATOR_LOOP: asyncio.AbstractEventLoop | None = None
+
+
+def _coordinator_loop() -> asyncio.AbstractEventLoop:
+    """Return the persistent event loop used for model-layer coordinator runs.
+
+    The OpenAI Agents SDK shares module-level async HTTP clients between runs, and
+    those clients bind themselves to the event loop they were first used with. Running
+    each coordinator turn through ``asyncio.run`` creates (and closes) a fresh event loop
+    per call, so any run after the first reuses a client bound to an already-closed loop
+    and fails with ``RuntimeError: Event loop is closed``. Reusing a single persistent
+    loop keeps the shared client lifecycle valid for the lifetime of the process.
+    """
+    global _COORDINATOR_LOOP
+    if _COORDINATOR_LOOP is None or _COORDINATOR_LOOP.is_closed():
+        _COORDINATOR_LOOP = asyncio.new_event_loop()
+    return _COORDINATOR_LOOP
+
+
+def close_coordinator_loop() -> None:
+    """Close the persistent coordinator loop; a fresh one is created on next use."""
+    global _COORDINATOR_LOOP
+    if _COORDINATOR_LOOP is not None and not _COORDINATOR_LOOP.is_closed():
+        _COORDINATOR_LOOP.close()
+    _COORDINATOR_LOOP = None
+
+
 def run_coordinator(patient_id: str, run_id: str, focus: str = "") -> dict:
     """Run the model-driven coordinator over one patient's stored records."""
     if not SDK_AVAILABLE:
@@ -221,7 +248,7 @@ def run_coordinator(patient_id: str, run_id: str, focus: str = "") -> dict:
     last_exc: Exception | None = None
     for attempt in range(2):
         try:
-            result = asyncio.run(_run())
+            result = _coordinator_loop().run_until_complete(_run())
             output = getattr(result, "final_output", None) or ""
             return {
                 "engine": "agents_sdk",

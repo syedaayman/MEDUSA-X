@@ -98,7 +98,7 @@ export default function Home() {
                 <p className="muted small">Documents: {sample.types}</p>
               </div>
               <button
-                className="button button-secondary w-full mt-3"
+                className="button w-full mt-3"
                 disabled={loadingSample === sample.id}
                 onClick={() => handleLoadSample(sample.id)}
                 type="button"
@@ -145,10 +145,6 @@ export default function Home() {
               <strong>Timeline &amp; Summary</strong> — orders events and writes a cited summary.
             </li>
           </ul>
-          <p className="notice">
-            Prototype notice: synthetic and uploaded demonstration data only. Not a medical device,
-            not compliant with healthcare regulation, and never a substitute for clinician review.
-          </p>
         </aside>
       </div>
 

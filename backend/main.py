@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend import repository
+from backend.agents import sdk_runtime
 from backend.api.dataset_routes import router as dataset_router
 from backend.api.patient_routes import router as patient_router
 from backend.api.report_routes import router as report_router
@@ -30,6 +31,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Create the SQLite schema on startup; no external database is required."""
     init_db()
     yield
+    sdk_runtime.close_coordinator_loop()
 
 
 app = FastAPI(
