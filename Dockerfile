@@ -23,7 +23,6 @@ RUN echo "os-refresh 2026-11-25" && apk upgrade --no-cache
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
-
 WORKDIR /app
 
 COPY backend/requirements.txt ./backend/requirements.txt
@@ -47,7 +46,6 @@ ENV HOME=/home/appjet \
     DATABASE_PATH=/app/data/medusa_x.db \
     STORAGE_DIR=/app/data/documents \
     DATASET_DIR=/app/sample_data/datasets
-
 EXPOSE 8000
 USER 10001:10001
 
