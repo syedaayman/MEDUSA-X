@@ -1,8 +1,17 @@
-fastapi>=0.115,<1.0
-uvicorn[standard]>=0.30,<1.0
+# MEDUSA-X backend requirements
+# FastAPI 0.165 requires starlette>=1.6.0; earlier releases pin starlette 0.4x,
+# which carries blocking advisories in the deployment image scan.
+fastapi>=0.165,<0.166
+starlette>=1.6.0
+uvicorn[standard]>=0.39,<0.40
 python-multipart>=0.0.9
-pymupdf>=1.24
-pydantic-settings>=2.4
+pydantic>=2.7,<3
+pydantic-settings>=2.3,<3
 python-dotenv>=1.0
-supabase>=2.7
-openai>=1.50
+# Pinned to the last release that publishes a musllinux wheel, so the Alpine
+# deployment image installs a prebuilt binary instead of compiling MuPDF.
+PyMuPDF==1.24.14
+openai-agents>=0.0.7
+openai>=1.40
+httpx>=0.27
+pytest>=8.0

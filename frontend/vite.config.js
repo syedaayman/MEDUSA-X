@@ -6,5 +6,13 @@ export default defineConfig({
   server: {
     host: "127.0.0.1",
     port: 5173,
+    // The client uses same-origin URLs, so dev proxies them to the local API.
+    proxy: {
+      "/api": "http://127.0.0.1:8000",
+      "/health": "http://127.0.0.1:8000",
+      "/docs": "http://127.0.0.1:8000",
+      "/redoc": "http://127.0.0.1:8000",
+      "/openapi.json": "http://127.0.0.1:8000",
+    },
   },
 });

@@ -1,12 +1,17 @@
-"""Lazy Supabase client configuration."""
+"""Tombstone for the removed Supabase integration.
 
-from supabase import Client, create_client
+MEDUSA-X persists everything in SQLite and uses no external database service,
+so no Supabase package, URL or secret key is required anywhere in the project.
+Nothing imports this module; it is kept only so that any stale import fails with
+an explicit message instead of a confusing ModuleNotFoundError.
+"""
 
-from config import settings
+from __future__ import annotations
 
 
-def get_supabase_client() -> Client:
-    """Create a Supabase client only when both credentials are configured."""
-    if not settings.supabase_url or not settings.supabase_secret_key:
-        raise RuntimeError("Set SUPABASE_URL and SUPABASE_SECRET_KEY before using Supabase.")
-    return create_client(settings.supabase_url, settings.supabase_secret_key)
+def get_supabase_client() -> None:  # pragma: no cover - removal guard
+    """Always raise: Supabase support was removed in favour of SQLite."""
+    raise RuntimeError(
+        "Supabase support was removed. MEDUSA-X stores all data in SQLite; "
+        "no external database credentials are used."
+    )
